@@ -1,0 +1,8 @@
+[project]
+name = "zb_hal_test"
+category = "zigbee"
+target = "T32CM11C"
+default_hex = "-dkncm11-combined.hex"
+
+[sdk]
+version = "v2025.05.00-beta00"

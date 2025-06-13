@@ -1,0 +1,80 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "hidden": true,
+      "binaryDir": "${fileDir}/build/${presetName}"
+    },
+    {
+      "name": "Debug",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "Release",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "T32CM11C",
+      "hidden": true,
+      "inherits": [
+        "default"
+      ],
+	    "toolchainFile": "${fileDir}/arm-gcc-toolchain-T32CM11.cmake",
+      "cacheVariables": {
+        "LINKER_SCRIPT_PATH":"${fileDir}/app_gcc_cm3_mcu_2mb.ld",
+        "PLATFORM":"T32CM11",
+        "FLASH_SIZE":"C"
+      }
+    },
+    {
+      "name": "T32CM11C.Debug",
+      "inherits": [
+        "T32CM11C",
+        "Debug"
+      ]
+    },
+    {
+      "name": "T32CM11C.Release",
+      "inherits": [
+        "T32CM11C",
+        "Release"
+      ]
+    },
+    {
+      "name": "T32CM11C.Test",
+      "inherits": [
+        "T32CM11C",
+        "Debug"
+      ],
+      "cacheVariables": {
+        "TR_TEST_BUILD":"1"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "T32CM11C.Debug",
+      "configurePreset": "T32CM11C.Debug"
+    },
+    {
+      "name": "T32CM11C.Release",
+      "configurePreset": "T32CM11C.Release"
+    },
+    {
+      "name": "T32CM11C.Test",
+      "configurePreset": "T32CM11C.Test"
+    }
+  ]
+}

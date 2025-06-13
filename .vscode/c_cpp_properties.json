@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "name": "T32CM11C",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/bootloader/**",
+                "${workspaceFolder}/generated/**",
+                "${workspaceFolder}/hal_config_*/**",
+                "${workspaceFolder}/src/**",
+                "${workspaceFolder}/tridentiot-sdk/**"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**",
+                    "${workspaceFolder}/bootloader/**",
+                    "${workspaceFolder}/generated/**",
+                    "${workspaceFolder}/hal_config_*/**",
+                    "${workspaceFolder}/src/**",
+                    "${workspaceFolder}/tridentiot-sdk/**"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            },
+            "defines": [
+                "TR_PLATFORM_T32CM11C"
+            ],
+            "intelliSenseMode": "${default}",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17"
+        }
+    ],
+    "version": 4
+}
