@@ -11,7 +11,8 @@
 #include "tr_af.h"
 #include "tr_hal_config.h"
 #include "project_app_tokens.h"
-#include "tr_hal_rtc.h"
+#include "tr_hal_uart.h"
+
 
 
 typedef struct
@@ -31,15 +32,6 @@ static void led_blink(tr_hal_gpio_pin_t led_pin,
                       zb_uint16_t       off_ms,
                       zb_uint8_t        blink_count);
 static void led_blink_handler(zb_uint8_t param);
-
-static void rtc_event_handler(uint32_t events, tr_hal_rtc_date_time now)
-{
-    tr_app_printf("RTC EVENT: 0x%08lx at %02d:%02d:%02d\n",
-                  events,
-                  now.time.hours,
-                  now.time.minutes,
-                  now.time.seconds);
-}
 
 
 void tr_hal_button_interrupt_cb(tr_hal_gpio_pin_t   pin,
@@ -72,14 +64,34 @@ void tr_app_init_cb(void)
         led_blink(GPIO_LED_GREEN, 2000, 1, 1);
     }
 
-    // RTC setup
-    tr_hal_rtc_settings_t rtc_cfg = DEFAULT_RTC_CONFIG;
+        // UART1 Setup (TX: GPIO4, RX: GPIO5)
+    static tr_hal_uart_settings_t g_uart1_settings = {
+        .tx_pin = UART1_TX_PIN_OPTION1,    // GPIO4
+        .rx_pin = UART1_RX_PIN_OPTION1,    // GPIO5
+        .baud_rate = TR_HAL_UART_BAUD_RATE_115200,
+        .data_bits = LCR_DATA_BITS_8_VALUE,
+        .stop_bits = LCR_STOP_BITS_ONE_VALUE,
+        .parity = LCR_PARITY_NONE_VALUE,
+        .tx_dma_enabled = false,
+        .rx_dma_enabled = false,
+        .rx_handler_function = NULL,
+        .rx_dma_buffer = NULL,
+        .rx_dma_buff_length = 0,
+        .rx_bytes_before_trigger = FCR_TRIGGER_1_BYTE,
+        .hardware_flow_control_enabled = false,
+        .enable_chip_interrupts = false,
+        .interrupt_priority = 3,
+        .wake_on_interrupt = false,
+    };
 
-    rtc_cfg.event_handler_fx = rtc_event_handler;
-    rtc_cfg.seconds_event_trigger = TR_HAL_EVENT_TRIGGER_ON_UNIT_CHANGE;
+    tr_hal_status_t uart_status = tr_hal_uart_init(UART_1_ID, &g_uart1_settings);
+    tr_app_printf("UART1 init: %s\n", uart_status == TR_HAL_SUCCESS ? "OK" : "FAIL");
 
-    tr_hal_status_t rtc_status = tr_hal_rtc_init(&rtc_cfg);
-    tr_app_printf("RTC init: %s\n", rtc_status == TR_HAL_SUCCESS ? "OK" : "FAIL");
+    const char* uart_msg = " UART1 test OK from T32CM11!\r\n";
+    tr_hal_uart_raw_tx_buffer(UART_1_ID, uart_msg, strlen(uart_msg));
+
+
+
 }
 
 
