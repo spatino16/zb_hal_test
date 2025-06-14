@@ -11,7 +11,7 @@
 #include "tr_af.h"
 #include "tr_hal_config.h"
 #include "project_app_tokens.h"
-#include "tr_hal_rtc.h"
+#include "tr_hal_wdog.h"
 
 
 typedef struct
@@ -32,14 +32,21 @@ static void led_blink(tr_hal_gpio_pin_t led_pin,
                       zb_uint8_t        blink_count);
 static void led_blink_handler(zb_uint8_t param);
 
-static void rtc_event_handler(uint32_t events, tr_hal_rtc_date_time now)
+static void wdog_event_handler(uint32_t event_mask)
 {
-    tr_app_printf("RTC EVENT: 0x%08lx at %02d:%02d:%02d\n",
-                  events,
-                  now.time.hours,
-                  now.time.minutes,
-                  now.time.seconds);
+    if (event_mask & TR_HAL_WDOG_EVENT_INT_TRIGGERED)
+    {
+        tr_app_printf(" Watchdog interrupt triggered!\n");
+    }
 }
+
+static void wdog_feed_cb(zb_uint8_t param)
+{
+    ZVUNUSED(param);
+    tr_hal_wdog_reset();  // Reset watchdog counter
+    ZB_SCHEDULE_APP_ALARM(wdog_feed_cb, 0, ZB_TIME_ONE_SECOND);  // S
+}
+
 
 
 void tr_hal_button_interrupt_cb(tr_hal_gpio_pin_t   pin,
@@ -72,14 +79,18 @@ void tr_app_init_cb(void)
         led_blink(GPIO_LED_GREEN, 2000, 1, 1);
     }
 
-    // RTC setup
-    tr_hal_rtc_settings_t rtc_cfg = DEFAULT_RTC_CONFIG;
+        // Watchdog setup
+    tr_hal_wdog_settings_t wdog_cfg = DEFAULT_WDOG_CONFIG;
+    wdog_cfg.interrupt_enabled = true;
+    wdog_cfg.interrupt_time_value = 3 * TR_HAL_WDOG_1_SECOND_TIMER_VALUE;
+    wdog_cfg.event_handler_fx = wdog_event_handler;
 
-    rtc_cfg.event_handler_fx = rtc_event_handler;
-    rtc_cfg.seconds_event_trigger = TR_HAL_EVENT_TRIGGER_ON_UNIT_CHANGE;
+    tr_hal_status_t wdog_status = tr_hal_wdog_init(&wdog_cfg);
+    tr_app_printf("WDOG init: %s\n", wdog_status == TR_HAL_SUCCESS ? "OK" : "FAIL");
 
-    tr_hal_status_t rtc_status = tr_hal_rtc_init(&rtc_cfg);
-    tr_app_printf("RTC init: %s\n", rtc_status == TR_HAL_SUCCESS ? "OK" : "FAIL");
+    ZB_SCHEDULE_APP_ALARM(wdog_feed_cb, 0, ZB_TIME_ONE_SECOND);
+
+
 }
 
 
@@ -317,3 +328,4 @@ zb_uint8_t *tr_zcl_external_attribute_read_cb(uint8_t  endpoint,
     }
     return NULL;
 }
+
