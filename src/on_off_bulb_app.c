@@ -47,6 +47,18 @@ static void wdog_feed_cb(zb_uint8_t param)
     ZB_SCHEDULE_APP_ALARM(wdog_feed_cb, 0, ZB_TIME_ONE_SECOND);  // S
 }
 
+static void disable_watchdog(void)
+{
+    tr_hal_status_t status = tr_hal_wdog_disable();
+    tr_app_printf(" Watchdog DISABLE: %s\n", status == TR_HAL_SUCCESS ? "OK" : "FAIL");
+}
+
+static void enable_watchdog(void)
+{
+    tr_hal_status_t status = tr_hal_wdog_enable();
+    tr_app_printf(" Watchdog ENABLE: %s\n", status == TR_HAL_SUCCESS ? "OK" : "FAIL");
+}
+
 
 
 void tr_hal_button_interrupt_cb(tr_hal_gpio_pin_t   pin,
@@ -55,18 +67,20 @@ void tr_hal_button_interrupt_cb(tr_hal_gpio_pin_t   pin,
     if (tr_hal_gpio_are_pins_equal(pin, GPIO_BUTTON1))
     {
         tr_app_printf("BTN1 pressed!\n");
+        disable_watchdog();  // Desactiva WDOG con BTN1
     }
     else if (tr_hal_gpio_are_pins_equal(pin, GPIO_BUTTON2))
     {
         tr_app_printf("BTN2 pressed!\n");
+        enable_watchdog();   // Activa WDOG con BTN2
     }
 
-    // restart backoff delay on button press
     if (tr_network_rejoin_backoff_active())
     {
         tr_network_rejoin_reset_backoff_delay();
     }
 }
+
 
 void tr_app_init_cb(void)
 {
@@ -89,6 +103,35 @@ void tr_app_init_cb(void)
     tr_app_printf("WDOG init: %s\n", wdog_status == TR_HAL_SUCCESS ? "OK" : "FAIL");
 
     ZB_SCHEDULE_APP_ALARM(wdog_feed_cb, 0, ZB_TIME_ONE_SECOND);
+
+        // Leer cuántos resets causó el watchdog
+    uint32_t reset_count = 0;
+    tr_hal_status_t reset_status = tr_hal_wdog_read_num_resets(&reset_count);
+    if (reset_status == TR_HAL_SUCCESS)
+    {
+        tr_app_printf("🔁 WDOG Reset Count: %lu\n", reset_count);
+    }
+    else
+    {
+        tr_app_printf("⚠️ Failed to read WDOG reset count: %d\n", reset_status);
+    }
+
+    // Leer el estado interno del watchdog
+    uint32_t initial_time = 0, curr_time = 0, int_time = 0, min_time = 0;
+    tr_hal_status_t state_status = tr_hal_wdog_read_curr_state(&initial_time, &curr_time, &int_time, &min_time);
+    if (state_status == TR_HAL_SUCCESS)
+    {
+        tr_app_printf("⏱ WDOG State:\n");
+        tr_app_printf("   Initial: %lu\n", initial_time);
+        tr_app_printf("   Current: %lu\n", curr_time);
+        tr_app_printf("   IntTime: %lu\n", int_time);
+        tr_app_printf("   MinTime: %lu\n", min_time);
+    }
+    else
+    {
+        tr_app_printf("⚠️ Failed to read WDOG state: %d\n", state_status);
+    }
+
 
 
 }
