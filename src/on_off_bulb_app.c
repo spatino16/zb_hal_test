@@ -32,14 +32,42 @@ static void led_blink(tr_hal_gpio_pin_t led_pin,
                       zb_uint8_t        blink_count);
 static void led_blink_handler(zb_uint8_t param);
 
+static tr_hal_rtc_time g_time_reference;
+static bool g_reference_set = false;
+
+
 static void rtc_event_handler(uint32_t events, tr_hal_rtc_date_time now)
 {
-    tr_app_printf("RTC EVENT: 0x%08lx at %02d:%02d:%02d\n",
-                  events,
+    tr_app_printf("RTC: %04d-%02d-%02d %02d:%02d:%02d [event: 0x%08lx]\n",
+                  now.date.years,
+                  now.date.months,
+                  now.date.days,
                   now.time.hours,
                   now.time.minutes,
-                  now.time.seconds);
+                  now.time.seconds,
+                  events);
+
+    if (!g_reference_set)
+    {
+        g_time_reference = now.time;
+        g_reference_set = true;
+        tr_app_printf("Reference time saved at %02d:%02d:%02d\n",
+                      g_time_reference.hours,
+                      g_time_reference.minutes,
+                      g_time_reference.seconds);
+    }
+    else
+    {
+        if (tr_hal_rtc_diff_greater_than_ms(&now.time, &g_time_reference, 5000))
+        {
+            tr_app_printf("✅ More than 5 seconds have passed since reference time!\n");
+
+            // Reset reference to current time
+            g_time_reference = now.time;
+        }
+    }
 }
+
 
 
 void tr_hal_button_interrupt_cb(tr_hal_gpio_pin_t   pin,
@@ -72,14 +100,32 @@ void tr_app_init_cb(void)
         led_blink(GPIO_LED_GREEN, 2000, 1, 1);
     }
 
-    // RTC setup
     tr_hal_rtc_settings_t rtc_cfg = DEFAULT_RTC_CONFIG;
 
-    rtc_cfg.event_handler_fx = rtc_event_handler;
-    rtc_cfg.seconds_event_trigger = TR_HAL_EVENT_TRIGGER_ON_UNIT_CHANGE;
+    // init time  0:00:00
+    rtc_cfg.rtc_date_time.time.hours   = 0;
+    rtc_cfg.rtc_date_time.time.minutes = 0;
+    rtc_cfg.rtc_date_time.time.seconds = 0;
 
-    tr_hal_status_t rtc_status = tr_hal_rtc_init(&rtc_cfg);
-    tr_app_printf("RTC init: %s\n", rtc_status == TR_HAL_SUCCESS ? "OK" : "FAIL");
+    // date (test)
+    rtc_cfg.rtc_date_time.date.years  = 2025;
+    rtc_cfg.rtc_date_time.date.months = 1;
+    rtc_cfg.rtc_date_time.date.days   = 1;
+
+    // Callback event
+    rtc_cfg.event_handler_fx = rtc_event_handler;
+
+    // event 15 min
+    rtc_cfg.minutes_event_trigger = TR_HAL_EVENT_TRIGGER_ON_SPECIFIC_VALUE;
+    rtc_cfg.minutes_trigger_value = 15;
+
+    // Init RTC
+    tr_hal_status_t status = tr_hal_rtc_init(&rtc_cfg);
+    tr_app_printf("RTC init: %s\n", status == TR_HAL_SUCCESS ? "OK" : "FAIL");
+
+    // speed time up (testing)
+    tr_hal_rtc_speedup_for_testing(TR_HAL_RTC_SPEEDUP_MINUTES);
+
 }
 
 
