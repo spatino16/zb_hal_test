@@ -33,6 +33,30 @@ static void led_blink(tr_hal_gpio_pin_t led_pin,
                       zb_uint8_t        blink_count);
 static void led_blink_handler(zb_uint8_t param);
 
+void uart1_echo_task(void)
+{
+    char rx_byte;
+
+    tr_hal_status_t status = tr_hal_uart_raw_rx_one_byte(UART_1_ID, &rx_byte);
+
+    if (status == TR_HAL_STATUS_MORE_BYTES || status == TR_HAL_STATUS_DONE)
+    {
+        tr_app_printf("UART RX: %c\n", rx_byte);  // Debug en consola USB
+        tr_hal_uart_raw_tx_one_byte(UART_1_ID, rx_byte);  // eco
+    }
+}
+
+
+static void uart_poll_handler(zb_uint8_t param)
+{
+    ZVUNUSED(param);
+
+    uart1_echo_task();  // lee y responde si hay algo
+
+    ZB_SCHEDULE_APP_ALARM(uart_poll_handler, 0, ZB_MILLISECONDS_TO_BEACON_INTERVAL(50)); // repite cada 50 ms
+}
+
+
 
 void tr_hal_button_interrupt_cb(tr_hal_gpio_pin_t   pin,
                                 tr_hal_gpio_event_t event)
@@ -89,6 +113,9 @@ void tr_app_init_cb(void)
 
     const char* uart_msg = " UART1 test OK from T32CM11!\r\n";
     tr_hal_uart_raw_tx_buffer(UART_1_ID, uart_msg, strlen(uart_msg));
+
+    ZB_SCHEDULE_APP_ALARM(uart_poll_handler, 0, ZB_MILLISECONDS_TO_BEACON_INTERVAL(50));
+
 
 
 
@@ -239,6 +266,7 @@ static void led_blink_handler(zb_uint8_t param)
             ZB_SCHEDULE_APP_ALARM(led_blink_handler, 0, g_blink_params.on_ms);
         }
     }
+    ///uart1_echo_task();
 }
 
 /************************************************************************************/
